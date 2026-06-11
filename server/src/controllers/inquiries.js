@@ -4,13 +4,16 @@ import Property from '../models/Property.js';
 export const createInquiry = async (req, res, next) => {
   try {
     const { property, name, email, phone, message, preferredContact } = req.body;
+    if (!property || !name || !email || !message) {
+      return res.status(400).json({ message: 'Property, name, email, and message are required' });
+    }
     const prop = await Property.findById(property);
     if (!prop) return res.status(404).json({ message: 'Property not found' });
     const inquiry = await Inquiry.create({
       property, name, email, phone, message, preferredContact,
-      sender: req.user?.id,
+      sender: req.user?.id || null,
       messages: [{
-        sender: req.user?.id,
+        sender: req.user?.id || null,
         senderName: name,
         senderEmail: email,
         text: message,
@@ -26,9 +29,9 @@ export const replyToInquiry = async (req, res, next) => {
     const inquiry = await Inquiry.findById(req.params.id);
     if (!inquiry) return res.status(404).json({ message: 'Inquiry not found' });
     const property = await Property.findById(inquiry.property);
-    if (property.owner.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
+    const isOwner = property?.owner?.toString() === req.user?.id || req.user?.role === 'admin';
+    if (!isOwner) return res.status(403).json({ message: 'Not authorized' });
+    if (!req.body.message?.trim()) return res.status(400).json({ message: 'Message is required' });
     inquiry.messages.push({
       sender: req.user.id,
       senderName: `${req.user.firstName} ${req.user.lastName}`,
@@ -59,7 +62,7 @@ export const getMyInquiries = async (req, res, next) => {
     const inquiries = await Inquiry.find({
       $or: [
         { sender: req.user.id },
-        { email: req.user.email }
+        { email: { $regex: new RegExp(`^${req.user.email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
       ]
     })
       .populate('property', 'title price type location.city images')
@@ -72,6 +75,7 @@ export const getAgentInquiries = async (req, res, next) => {
   try {
     const userProperties = await Property.find({ owner: req.user.id }).select('_id');
     const propertyIds = userProperties.map(p => p._id);
+    if (propertyIds.length === 0) return res.json({ inquiries: [] });
     const inquiries = await Inquiry.find({ property: { $in: propertyIds } })
       .populate('property', 'title price type location.city images')
       .sort('-updatedAt');
@@ -82,7 +86,7 @@ export const getAgentInquiries = async (req, res, next) => {
 export const getAllInquiries = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = 20;
+    const limit = 50;
     const skip = (page - 1) * limit;
     const filter = {};
     if (req.query.status) filter.status = req.query.status;
@@ -98,26 +102,22 @@ export const getAllInquiries = async (req, res, next) => {
 export const getInquiry = async (req, res, next) => {
   try {
     const inquiry = await Inquiry.findById(req.params.id)
-      .populate('property', 'title price type location.city images contactInfo owner')
-      .populate('messages.sender', 'firstName lastName email');
+      .populate('property', 'title price type location.city images contactInfo owner');
     if (!inquiry) return res.status(404).json({ message: 'Inquiry not found' });
     const property = await Property.findById(inquiry.property);
-    const ownerId = property?.owner?.toString();
-    const isOwner = ownerId === req.user?.id || ownerId === req.user?._id?.toString();
-    const isSender = inquiry.sender?.toString() === req.user?.id || inquiry.email === req.user?.email;
+    const isOwner = property?.owner?.toString() === req.user?.id;
     const isAdmin = req.user?.role === 'admin';
+    const isSender = inquiry.sender?.toString() === req.user?.id ||
+                    inquiry.email?.toLowerCase() === req.user?.email?.toLowerCase();
     if (!isOwner && !isSender && !isAdmin) {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    if (inquiry.status === 'new' && isOwner) {
-      inquiry.status = 'read';
+    if ((inquiry.status === 'new' || inquiry.status === 'read') && (isOwner || isAdmin)) {
+      inquiry.status = inquiry.status === 'new' ? 'read' : 'read';
       await inquiry.save();
     }
     res.json({ inquiry });
-  } catch (error) {
-    console.error('getInquiry error:', error.message);
-    next(error);
-  }
+  } catch (error) { next(error); }
 };
 
 export const updateInquiryStatus = async (req, res, next) => {
@@ -125,5 +125,21 @@ export const updateInquiryStatus = async (req, res, next) => {
     const inquiry = await Inquiry.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
     if (!inquiry) return res.status(404).json({ message: 'Inquiry not found' });
     res.json({ inquiry });
+  } catch (error) { next(error); }
+};
+
+export const getUnreadCount = async (req, res, next) => {
+  try {
+    let count = 0;
+    if (req.user.role === 'admin') {
+      count = await Inquiry.countDocuments({ status: 'new' });
+    } else {
+      const userProperties = await Property.find({ owner: req.user.id }).select('_id');
+      const propertyIds = userProperties.map(p => p._id);
+      if (propertyIds.length > 0) {
+        count = await Inquiry.countDocuments({ property: { $in: propertyIds }, status: 'new' });
+      }
+    }
+    res.json({ count });
   } catch (error) { next(error); }
 };

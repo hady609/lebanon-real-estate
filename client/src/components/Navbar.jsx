@@ -2,13 +2,21 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FiHome, FiUser, FiLogOut, FiMenu, FiX, FiHeart, FiGrid, FiBarChart2, FiSearch, FiLogIn, FiMessageSquare } from 'react-icons/fi';
 import { useState, useEffect } from 'react';
+import api from '../api/client';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      api.get('/inquiries/unread-count').then(r => setUnreadCount(r.data.count)).catch(() => {});
+    }
+  }, [user, location]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -54,8 +62,9 @@ export default function Navbar() {
                     <FiGrid className="text-base" /> My Listings
                   </Link>
                 )}
-                <Link to="/messages" className={`px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${isActive('/messages')} hover:bg-gray-100/80 flex items-center gap-1.5`}>
+                <Link to="/messages" className={`relative px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${isActive('/messages')} hover:bg-gray-100/80 flex items-center gap-1.5`}>
                   <FiMessageSquare className="text-base" /> Messages
+                  {unreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}
                 </Link>
                 <Link to="/saved" className={`p-2 rounded-xl text-sm font-medium transition-all duration-200 ${isActive('/saved')} hover:bg-gray-100/80`}>
                   <FiHeart className="text-lg" />
@@ -99,7 +108,10 @@ export default function Navbar() {
               <>
                 <div className="h-px bg-gray-200 my-2" />
                 <Link to="/profile" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-primary-50 transition-all text-sm font-medium"><FiUser /> Profile</Link>
-                <Link to="/messages" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-primary-50 transition-all text-sm font-medium"><FiMessageSquare /> Messages</Link>
+                <Link to="/messages" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-primary-50 transition-all text-sm font-medium">
+                  <div className="relative"><FiMessageSquare /> {unreadCount > 0 && <span className="absolute -top-2 -right-2 w-3.5 h-3.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}</div>
+                  Messages
+                </Link>
                 <Link to="/saved" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-primary-50 transition-all text-sm font-medium"><FiHeart /> Saved</Link>
                 {user.role === 'admin' && <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-primary-50 transition-all text-sm font-medium"><FiBarChart2 /> Dashboard</Link>}
                 {(user.role === 'agent' || user.role === 'seller') && <Link to="/my-properties" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-primary-50 transition-all text-sm font-medium"><FiGrid /> My Listings</Link>}
