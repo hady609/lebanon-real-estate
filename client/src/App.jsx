@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import Dashboard from './pages/Dashboard';
 import MyProperties from './pages/MyProperties';
 import SavedProperties from './pages/SavedProperties';
+import Messages from './pages/Messages';
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/my-properties" element={<ProtectedRoute><MyProperties /></ProtectedRoute>} />
           <Route path="/saved" element={<ProtectedRoute><SavedProperties /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute adminOnly><Dashboard /></ProtectedRoute>} />
+          <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         </Routes>
       </main>
       <Footer />

@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FiHome, FiUser, FiLogOut, FiMenu, FiX, FiHeart, FiGrid, FiBarChart2, FiSearch, FiLogIn } from 'react-icons/fi';
+import { FiHome, FiUser, FiLogOut, FiMenu, FiX, FiHeart, FiGrid, FiBarChart2, FiSearch, FiLogIn, FiMessageSquare } from 'react-icons/fi';
 import { useState, useEffect } from 'react';
 
 export default function Navbar() {
@@ -54,6 +54,9 @@ export default function Navbar() {
                     <FiGrid className="text-base" /> My Listings
                   </Link>
                 )}
+                <Link to="/messages" className={`px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${isActive('/messages')} hover:bg-gray-100/80 flex items-center gap-1.5`}>
+                  <FiMessageSquare className="text-base" /> Messages
+                </Link>
                 <Link to="/saved" className={`p-2 rounded-xl text-sm font-medium transition-all duration-200 ${isActive('/saved')} hover:bg-gray-100/80`}>
                   <FiHeart className="text-lg" />
                 </Link>
@@ -96,6 +99,7 @@ export default function Navbar() {
               <>
                 <div className="h-px bg-gray-200 my-2" />
                 <Link to="/profile" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-primary-50 transition-all text-sm font-medium"><FiUser /> Profile</Link>
+                <Link to="/messages" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-primary-50 transition-all text-sm font-medium"><FiMessageSquare /> Messages</Link>
                 <Link to="/saved" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-primary-50 transition-all text-sm font-medium"><FiHeart /> Saved</Link>
                 {user.role === 'admin' && <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-primary-50 transition-all text-sm font-medium"><FiBarChart2 /> Dashboard</Link>}
                 {(user.role === 'agent' || user.role === 'seller') && <Link to="/my-properties" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-primary-50 transition-all text-sm font-medium"><FiGrid /> My Listings</Link>}
