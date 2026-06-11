@@ -23,7 +23,21 @@ const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
 
-app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "https:", "data:"],
+      fontSrc: ["'self'", "https:", "data:"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "https:", "'unsafe-inline'"],
+      connectSrc: ["'self'", "https:"],
+      frameSrc: ["'self'"],
+      objectSrc: ["'none'"],
+    },
+  },
+}));
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(compression());
 app.use(cookieParser());
