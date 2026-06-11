@@ -98,12 +98,13 @@ export const getAllInquiries = async (req, res, next) => {
 export const getInquiry = async (req, res, next) => {
   try {
     const inquiry = await Inquiry.findById(req.params.id)
-      .populate('property', 'title price type location images contactInfo owner')
+      .populate('property', 'title price type location.city images contactInfo owner')
       .populate('messages.sender', 'firstName lastName email');
     if (!inquiry) return res.status(404).json({ message: 'Inquiry not found' });
     const property = await Property.findById(inquiry.property);
-    const isOwner = property && (property.owner.toString() === req.user?.id);
-    const isSender = inquiry.sender?.toString() === req.user?.id;
+    const ownerId = property?.owner?.toString();
+    const isOwner = ownerId === req.user?.id || ownerId === req.user?._id?.toString();
+    const isSender = inquiry.sender?.toString() === req.user?.id || inquiry.email === req.user?.email;
     const isAdmin = req.user?.role === 'admin';
     if (!isOwner && !isSender && !isAdmin) {
       return res.status(403).json({ message: 'Not authorized' });
@@ -113,7 +114,10 @@ export const getInquiry = async (req, res, next) => {
       await inquiry.save();
     }
     res.json({ inquiry });
-  } catch (error) { next(error); }
+  } catch (error) {
+    console.error('getInquiry error:', error.message);
+    next(error);
+  }
 };
 
 export const updateInquiryStatus = async (req, res, next) => {
